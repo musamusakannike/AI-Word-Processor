@@ -12,6 +12,22 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "AI Word Processor",
   description: "AI Word Processor - Create professional proposals, reports, and letters in seconds. By Musamusakannike (codiac)",
+  openGraph: {
+    title: "AI Word Processor",
+    description: "AI Word Processor - Create professional proposals, reports, and letters in seconds. By Musamusakannike (codiac)",
+    images: [
+      {
+        url: "/metadata.png",
+        alt: "AI Word Processor",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AI Word Processor",
+    description: "AI Word Processor - Create professional proposals, reports, and letters in seconds. By Musamusakannike (codiac)",
+    images: ["/metadata.png"],
+  },
 };
 
 export default function RootLayout({
