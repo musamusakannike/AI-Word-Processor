@@ -10,11 +10,56 @@ from pathlib import Path
 import traceback
 from datetime import datetime
 from dotenv import load_dotenv
+import asyncio
+from contextlib import asynccontextmanager
 
 # Load environment variables from .env file
 load_dotenv()
 
-app = FastAPI(title="AI Word Processor API")
+# Create directories for storing generated files
+GENERATED_DIR = Path("generated_files")
+GENERATED_DIR.mkdir(exist_ok=True)
+
+async def periodic_cleanup():
+    print("Cleanup task started")
+    while True:
+        await asyncio.sleep(60)  # Check every minute, wait before first check
+        try:
+            current_time = datetime.now().timestamp()
+            max_age_seconds = 600  # 10 minutes (10 * 60)
+            
+            for file_path in GENERATED_DIR.glob("*.docx"):
+                try:
+                    if not file_path.exists():
+                        continue
+                        
+                    stats = file_path.stat()
+                    file_age = current_time - stats.st_mtime
+                    
+                    if file_age > max_age_seconds:
+                        file_path.unlink()
+                        print(f"Deleted old file: {file_path.name}")
+                except OSError as e:
+                    print(f"Error accessing/deleting file {file_path}: {e}")
+                except Exception as e:
+                    print(f"Unexpected error with file {file_path}: {e}")
+                    
+        except Exception as e:
+            print(f"Error in cleanup loop: {e}")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Start the background task
+    cleanup_task = asyncio.create_task(periodic_cleanup())
+    yield
+    # Shutdown: Cancel the background task
+    cleanup_task.cancel()
+    try:
+        await cleanup_task
+    except asyncio.CancelledError:
+        pass
+
+app = FastAPI(title="AI Word Processor API", lifespan=lifespan)
 
 # Configure CORS
 app.add_middleware(
@@ -26,9 +71,7 @@ app.add_middleware(
 )
 
 
-# Create directories for storing generated files
-GENERATED_DIR = Path("generated_files")
-GENERATED_DIR.mkdir(exist_ok=True)
+
 
 # Mount the generated files directory for serving files
 app.mount("/files", StaticFiles(directory=str(GENERATED_DIR)), name="files")
@@ -42,7 +85,7 @@ genai.configure(api_key=GEMINI_API_KEY)
 
 # Initialize Gemini model
 model = genai.GenerativeModel(
-    model_name="gemini-2.0-flash-exp",
+    model_name="gemini-2.5-flash",
     system_instruction="""You are an expert document automation engineer specializing in `python-docx`.
 Your goal is to generate Python code that creates highly professional, visually appealing, and comprehensive DOCX documents.
 
@@ -200,7 +243,10 @@ async def download_file(filename: str):
     file_path = GENERATED_DIR / filename
     
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File not found")
+        raise HTTPException(
+            status_code=404, 
+            detail="This document has been deleted as it exceeded the 10-minute retention period. Please generate a new document."
+        )
     
     return FileResponse(
         path=str(file_path),
