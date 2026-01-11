@@ -1,80 +1,68 @@
 'use client';
 
-import { Sparkles, FileText, Zap } from 'lucide-react';
+import { Sparkles, FileText, Zap, ArrowRight } from 'lucide-react';
 
 export default function Hero() {
     return (
-        <div className="relative overflow-hidden bg-linear-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-indigo-950 dark:to-purple-950">
-            {/* Animated Background Elements */}
-            <div className="absolute inset-0 overflow-hidden">
-                <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 dark:bg-purple-700 rounded-full mix-blend-multiply dark:mix-blend-soft-light filter blur-xl opacity-70 animate-float" />
-                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-300 dark:bg-indigo-700 rounded-full mix-blend-multiply dark:mix-blend-soft-light filter blur-xl opacity-70 animate-float" style={{ animationDelay: '1s' }} />
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-300 dark:bg-pink-700 rounded-full mix-blend-multiply dark:mix-blend-soft-light filter blur-xl opacity-70 animate-float" style={{ animationDelay: '2s' }} />
-            </div>
+        <div className="relative overflow-hidden min-h-[90vh] flex items-center justify-center bg-transparent selection:bg-primary/30">
+            {/* Background moved to page.tsx for global consistency */}
 
-            <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
-                <div className="text-center animate-fade-in">
-                    {/* Badge */}
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-indigo-200 dark:border-indigo-800 mb-8 animate-scale-in">
-                        <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                        <span className="text-sm font-medium text-indigo-900 dark:text-indigo-100">
-                            AI-Powered Document Generation
+            <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 flex flex-col items-center text-center z-10">
+
+                {/* Badge */}
+                <div className="animate-fade-in opacity-0" style={{ animationDelay: '0.1s' }}>
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-sm mb-8 hover:bg-white/50 dark:hover:bg-slate-800/50 transition-colors cursor-default">
+                        <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                            Now with GPT-4 Turbo
                         </span>
-                    </div>
-
-                    {/* Main Heading */}
-                    <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6">
-                        <span className="block text-gray-900 dark:text-white">
-                            Create Documents
-                        </span>
-                        <span className="block gradient-text mt-2">
-                            With AI Magic
-                        </span>
-                    </h1>
-
-                    {/* Description */}
-                    <p className="max-w-2xl mx-auto text-xl text-gray-600 dark:text-gray-300 mb-12">
-                        Transform your ideas into professional Word documents instantly.
-                        Just describe what you need, and let AI do the heavy lifting.
-                    </p>
-
-                    {/* Feature Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mt-16">
-                        <FeatureCard
-                            icon={<Sparkles className="w-6 h-6" />}
-                            title="AI-Powered"
-                            description="Advanced AI generates perfect documents from your prompts"
-                            gradient="from-purple-500 to-pink-500"
-                        />
-                        <FeatureCard
-                            icon={<FileText className="w-6 h-6" />}
-                            title="Edit & Export"
-                            description="Edit with our rich text editor and download as DOCX"
-                            gradient="from-indigo-500 to-purple-500"
-                        />
-                        <FeatureCard
-                            icon={<Zap className="w-6 h-6" />}
-                            title="Lightning Fast"
-                            description="Generate professional documents in seconds"
-                            gradient="from-blue-500 to-indigo-500"
-                        />
                     </div>
                 </div>
-            </div>
 
-            {/* Bottom Wave */}
-            <div className="absolute bottom-0 left-0 right-0">
-                <svg
-                    viewBox="0 0 1440 120"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-full h-auto"
-                >
-                    <path
-                        d="M0 0L60 10C120 20 240 40 360 46.7C480 53 600 47 720 43.3C840 40 960 40 1080 46.7C1200 53 1320 67 1380 73.3L1440 80V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0V0Z"
-                        className="fill-white dark:fill-gray-900"
+                {/* Main Heading */}
+                <h1 className="text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tight mb-8 animate-fade-in opacity-0" style={{ animationDelay: '0.2s' }}>
+                    <span className="block text-foreground drop-shadow-sm">
+                        Create Documents
+                    </span>
+                    <span className="block gradient-text mt-2 pb-4">
+                        With AI Magic
+                    </span>
+                </h1>
+
+                {/* Description */}
+                <p className="max-w-2xl mx-auto text-xl sm:text-2xl text-muted-foreground mb-12 leading-relaxed animate-fade-in opacity-0" style={{ animationDelay: '0.3s' }}>
+                    Transform your ideas into professional Word documents instantly.
+                    Just describe what you need, and let our advanced AI do the heavy lifting in seconds.
+                </p>
+
+                {/* Call to Action Buttons - Optional if we had navigation, but good for visual hierarchy */}
+                {/* <div className="flex flex-col sm:flex-row gap-4 mb-20 animate-fade-in opacity-0" style={{ animationDelay: '0.4s' }}>
+                    <button className="px-8 py-4 rounded-full bg-primary text-white font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-1 transition-all duration-300 flex items-center gap-2">
+                        Get Started <ArrowRight className="w-5 h-5" />
+                    </button>
+                    <button className="px-8 py-4 rounded-full bg-white dark:bg-slate-800 text-foreground font-semibold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-300">
+                        View Examples
+                    </button>
+                 </div> */}
+
+                {/* Feature Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl w-full animate-fade-in opacity-0" style={{ animationDelay: '0.5s' }}>
+                    <FeatureCard
+                        icon={<Sparkles className="w-6 h-6 text-purple-500" />}
+                        title="AI-Powered"
+                        description="Advanced AI generates perfect documents from your prompts."
                     />
-                </svg>
+                    <FeatureCard
+                        icon={<FileText className="w-6 h-6 text-blue-500" />}
+                        title="Edit & Export"
+                        description="Edit with our rich text editor and download as DOCX instantly."
+                    />
+                    <FeatureCard
+                        icon={<Zap className="w-6 h-6 text-amber-500" />}
+                        title="Lightning Fast"
+                        description="Generate professional documents in seconds, not hours."
+                    />
+                </div>
             </div>
         </div>
     );
@@ -84,19 +72,21 @@ interface FeatureCardProps {
     icon: React.ReactNode;
     title: string;
     description: string;
-    gradient: string;
 }
 
-function FeatureCard({ icon, title, description, gradient }: FeatureCardProps) {
+function FeatureCard({ icon, title, description }: FeatureCardProps) {
     return (
-        <div className="group relative bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100 dark:border-gray-700 animate-scale-in">
-            <div className={`inline-flex p-3 rounded-xl bg-linear-to-br ${gradient} text-white mb-4 group-hover:scale-110 transition-transform duration-300`}>
+        <div className="group glass-card p-8 rounded-2xl hover-lift text-left relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
                 {icon}
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <div className="inline-flex p-3 rounded-xl bg-slate-100 dark:bg-slate-800 mb-6 group-hover:scale-110 transition-transform duration-300 border border-slate-200 dark:border-slate-700">
+                {icon}
+            </div>
+            <h3 className="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors">
                 {title}
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">
+            <p className="text-muted-foreground leading-relaxed">
                 {description}
             </p>
         </div>

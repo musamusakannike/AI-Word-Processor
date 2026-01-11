@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import TiptapEditor from './TiptapEditor';
-import { Wand2, Download, Loader2, AlertCircle, CheckCircle2, FileText } from 'lucide-react';
+import { Wand2, Download, Loader2, AlertCircle, CheckCircle2, Lightbulb, FileEdit, ArrowRight } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -18,7 +18,7 @@ interface GenerateResponse {
 
 export default function DocumentGenerator() {
     const [prompt, setPrompt] = useState('');
-    const [editorContent, setEditorContent] = useState('<p>Your generated document will appear here...</p>');
+    const [editorContent, setEditorContent] = useState('<p class="text-muted-foreground italic">Your generated document will appear here...</p>');
     const [isGenerating, setIsGenerating] = useState(false);
     const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
     const [filename, setFilename] = useState<string | null>(null);
@@ -71,144 +71,176 @@ export default function DocumentGenerator() {
         }
     };
 
-    return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Left Column - Prompt Input */}
-                <div className="space-y-6 animate-slide-in">
-                    <div>
-                        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                            Describe Your Document
-                        </h2>
-                        <p className="text-gray-600 dark:text-gray-400">
-                            Tell us what kind of document you need, and we'll create it for you.
-                        </p>
-                    </div>
+    const setExamplePrompt = (text: string) => {
+        setPrompt(text);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
-                    {/* Prompt Input */}
-                    <div className="relative">
-                        <textarea
-                            value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
-                            placeholder="Example: Create a professional business proposal for a software development project. Include sections for executive summary, project scope, timeline, budget, and team qualifications. Use formal language and add a table for the budget breakdown."
-                            className="w-full h-64 px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900 transition-all duration-200 resize-none"
-                            disabled={isGenerating}
-                        />
-                        <div className="absolute bottom-3 right-3 text-sm text-gray-400">
-                            {prompt.length} characters
+    return (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+
+                {/* Left Column - Prompt Input */}
+                <div className="space-y-8 animate-slide-in">
+                    <div className="glass-card rounded-3xl p-8 border border-white/20 dark:border-white/10 shadow-xl">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-2.5 bg-primary/10 rounded-xl text-primary">
+                                <Wand2 className="w-6 h-6" />
+                            </div>
+                            <h2 className="text-2xl font-bold tracking-tight">
+                                Describe Your Document
+                            </h2>
+                        </div>
+
+                        <div className="space-y-4">
+                            <label className="block text-sm font-medium text-muted-foreground w-full">
+                                What would you like to create today?
+                            </label>
+
+                            <div className="relative group">
+                                <textarea
+                                    value={prompt}
+                                    onChange={(e) => setPrompt(e.target.value)}
+                                    placeholder="e.g. Create a comprehensive marketing proposal for a new coffee brand..."
+                                    className="w-full h-48 px-4 py-4 rounded-xl border border-input bg-background/50 backdrop-blur-sm text-foreground placeholder:text-muted-foreground/70 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-300 resize-none leading-relaxed shadow-sm group-hover:shadow-md"
+                                    disabled={isGenerating}
+                                />
+                                <div className="absolute bottom-4 right-4 text-xs font-medium text-muted-foreground/60 bg-background/80 px-2 py-1 rounded-md backdrop-blur-md">
+                                    {prompt.length} chars
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleGenerate}
+                                disabled={isGenerating || !prompt.trim()}
+                                className="w-full flex items-center justify-center gap-2 px-8 py-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+                            >
+                                {isGenerating ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        Generating Magic...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Wand2 className="w-5 h-5" />
+                                        Generate Document
+                                    </>
+                                )}
+                            </button>
                         </div>
                     </div>
 
-                    {/* Generate Button */}
-                    <button
-                        onClick={handleGenerate}
-                        disabled={isGenerating || !prompt.trim()}
-                        className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                    >
-                        {isGenerating ? (
-                            <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                                Generating...
-                            </>
-                        ) : (
-                            <>
-                                <Wand2 className="w-5 h-5" />
-                                Generate Document
-                            </>
-                        )}
-                    </button>
-
                     {/* Status Messages */}
                     {error && (
-                        <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl animate-scale-in">
-                            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-                            <div className="flex-1">
-                                <h4 className="font-semibold text-red-900 dark:text-red-100 mb-1">Error</h4>
-                                <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+                        <div className="flex items-start gap-4 p-4 bg-destructive/5 text-destructive border border-destructive/20 rounded-2xl animate-shake">
+                            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                            <div>
+                                <h4 className="font-semibold mb-1">Generation Failed</h4>
+                                <p className="text-sm opacity-90">{error}</p>
                             </div>
                         </div>
                     )}
 
                     {success && (
-                        <div className="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl animate-scale-in">
-                            <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
-                            <div className="flex-1">
-                                <h4 className="font-semibold text-green-900 dark:text-green-100 mb-1">Success</h4>
-                                <p className="text-sm text-green-700 dark:text-green-300">{success}</p>
+                        <div className="flex items-start gap-4 p-4 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-2xl animate-fade-in">
+                            <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
+                            <div>
+                                <h4 className="font-semibold mb-1">Success!</h4>
+                                <p className="text-sm opacity-90">{success}</p>
                             </div>
                         </div>
                     )}
 
-                    {/* Download Button */}
                     {downloadUrl && (
                         <button
                             onClick={handleDownload}
-                            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 animate-scale-in"
+                            className="w-full group relative overflow-hidden flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transform hover:-translate-y-0.5 transition-all duration-300 animate-scale-in"
                         >
-                            <Download className="w-5 h-5" />
-                            Download {filename || 'Document'}
+                            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 transform skew-y-6" />
+                            <Download className="w-5 h-5 relative z-10" />
+                            <span className="relative z-10">Download {filename || 'Document'}</span>
                         </button>
                     )}
 
                     {/* Example Prompts */}
-                    <div className="bg-linear-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 rounded-xl p-6 border border-indigo-100 dark:border-indigo-900">
-                        <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                            <FileText className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                            Example Prompts
+                    <div className="pt-6">
+                        <h3 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4 px-2">
+                            <Lightbulb className="w-4 h-4" />
+                            Try these examples
                         </h3>
-                        <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                            <li className="flex items-start gap-2">
-                                <span className="text-indigo-600 dark:text-indigo-400 mt-1">•</span>
-                                <button
-                                    onClick={() => setPrompt('Create a meeting agenda for a quarterly business review with sections for objectives, discussion topics, action items, and next steps.')}
-                                    className="text-left hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                                >
-                                    Meeting agenda for quarterly business review
-                                </button>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <span className="text-indigo-600 dark:text-indigo-400 mt-1">•</span>
-                                <button
-                                    onClick={() => setPrompt('Generate a professional resume with sections for summary, work experience, education, and skills. Use modern formatting with bullet points.')}
-                                    className="text-left hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                                >
-                                    Professional resume template
-                                </button>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <span className="text-indigo-600 dark:text-indigo-400 mt-1">•</span>
-                                <button
-                                    onClick={() => setPrompt('Create a project proposal with executive summary, problem statement, proposed solution, timeline with milestones, budget breakdown table, and risk assessment.')}
-                                    className="text-left hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                                >
-                                    Project proposal with budget table
-                                </button>
-                            </li>
-                        </ul>
+                        <div className="grid grid-cols-1 gap-3">
+                            <ExamplePrompt
+                                onClick={() => setExamplePrompt('Create a meeting agenda for a quarterly business review with sections for objectives, discussion topics, action items, and next steps.')}
+                                title="Quarterly Business Review Agenda"
+                                description="Structure your QBR meeting efficiently."
+                            />
+                            <ExamplePrompt
+                                onClick={() => setExamplePrompt('Generate a professional resume with sections for summary, work experience, education, and skills. Use modern formatting with bullet points.')}
+                                title="Professional Resume Template"
+                                description="Stand out with a clean resume layout."
+                            />
+                            <ExamplePrompt
+                                onClick={() => setExamplePrompt('Create a project proposal with executive summary, problem statement, proposed solution, timeline with milestones, budget breakdown table, and risk assessment.')}
+                                title="Detailed Project Proposal"
+                                description="Comprehensive proposal with budget tables."
+                            />
+                        </div>
                     </div>
                 </div>
 
                 {/* Right Column - Editor Preview */}
-                <div className="space-y-6 animate-slide-in" style={{ animationDelay: '0.1s' }}>
-                    <div>
-                        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                            Edit & Preview
-                        </h2>
-                        <p className="text-gray-600 dark:text-gray-400">
-                            Fine-tune your document with our rich text editor.
-                        </p>
+                <div className="lg:h-[calc(100vh-200px)] lg:sticky lg:top-8 animate-slide-in flex flex-col" style={{ animationDelay: '0.1s' }}>
+                    <div className="glass-card rounded-3xl p-1 border border-white/20 dark:border-white/10 shadow-2xl flex-1 flex flex-col overflow-hidden ring-1 ring-black/5 dark:ring-white/5">
+                        <div className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-border p-4 flex items-center justify-between backdrop-blur-sm">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-black/5 dark:border-white/5">
+                                    <FileEdit className="w-4 h-4 text-primary" />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-sm">Visual Preview</h3>
+                                    <p className="text-xs text-muted-foreground">Rich text editor</p>
+                                </div>
+                            </div>
+                            <div className="text-xs font-medium px-2 py-1 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                Preview Mode
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-hidden bg-white dark:bg-slate-950/50 relative">
+                            {/* Editor wrapper with custom scrollbar styling if needed */}
+                            <div className="absolute inset-0 overflow-y-auto custom-scrollbar">
+                                <TiptapEditor content={editorContent} onChange={setEditorContent} />
+                            </div>
+                        </div>
                     </div>
 
-                    <TiptapEditor content={editorContent} onChange={setEditorContent} />
-
-                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                            <strong className="text-gray-900 dark:text-white">Note:</strong> The editor is for preview and manual editing.
-                            Generated documents are created server-side and can be downloaded as DOCX files.
+                    <div className="mt-4 px-4 py-3 bg-primary/5 border border-primary/10 rounded-xl flex items-start gap-3">
+                        <div className="shrink-0 mt-0.5 w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                        <p className="text-xs text-muted-foreground">
+                            <strong className="text-foreground">Pro Tip:</strong> The editor above shows a preview. The actual DOCX file is generated server-side for maximum compatibility with Microsoft Word.
                         </p>
                     </div>
                 </div>
             </div>
         </div>
+    );
+}
+
+function ExamplePrompt({ onClick, title, description }: { onClick: () => void, title: string, description: string }) {
+    return (
+        <button
+            onClick={onClick}
+            className="group w-full text-left p-4 rounded-xl bg-white dark:bg-slate-800/50 border border-border hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-between"
+        >
+            <div>
+                <span className="block font-medium text-foreground group-hover:text-primary transition-colors text-sm">
+                    {title}
+                </span>
+                <span className="block text-xs text-muted-foreground mt-0.5">
+                    {description}
+                </span>
+            </div>
+            <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transform group-hover:translate-x-1 transition-all" />
+        </button>
     );
 }
