@@ -189,22 +189,65 @@ Requirements:
 - Ensure the code handles the saving to 'output_path'.
 """
         
-        # Generate code using Gemini
-        response = model.generate_content(gemini_prompt)
-        generated_code = response.text.strip()
+        # Retry loop for robust generation
+        max_retries = 3
+        last_error = None
+        generated_code = ""
         
-        # Prepare execution environment
-        exec_globals = {
-            "output_path": str(output_path),
-            "__builtins__": __builtins__
-        }
-        
-        # Execute the generated code
-        exec(generated_code, exec_globals)
-        
-        # Verify the file was created
-        if not output_path.exists():
-            raise Exception("Document file was not created")
+        for attempt in range(max_retries):
+            try:
+                if attempt > 0:
+                    print(f"Attempt {attempt + 1}: Retrying due to error: {last_error}")
+                    # Refine prompt with error information
+                    retry_prompt = f"""The previous Python code you generated failed with the following error:
+{str(last_error)}
+
+The code that failed was:
+{generated_code}
+
+Please FIX the error and provide the corrected, complete executable Python code.
+Ensure all imports are correct and the file is saved to 'output_path'.
+output_path variable is available in the environment, do not define it, just use it.
+"""
+                    response = model.generate_content(retry_prompt)
+                else:
+                    response = model.generate_content(gemini_prompt)
+
+                raw_code = response.text.strip()
+                
+                # enhanced markdown cleaning
+                generated_code = raw_code
+                if generated_code.startswith("```python"):
+                    generated_code = generated_code.replace("```python", "", 1)
+                elif generated_code.startswith("```"):
+                    generated_code = generated_code.replace("```", "", 1)
+                
+                if generated_code.endswith("```"):
+                    generated_code = generated_code[:-3]
+                
+                generated_code = generated_code.strip()
+                
+                # Prepare execution environment
+                exec_globals = {
+                    "output_path": str(output_path),
+                    "__builtins__": __builtins__
+                }
+                
+                # Execute the generated code
+                exec(generated_code, exec_globals)
+                
+                # Verify the file was created
+                if not output_path.exists():
+                    raise Exception("Code executed without error, but document file was not created at 'output_path'.")
+                
+                # If we get here, it worked
+                break
+                
+            except Exception as e:
+                last_error = e
+                # If this was the last attempt, we let the exception bubble up to the main try/except
+                if attempt == max_retries - 1:
+                    raise e
         
         # Generate download URL
         download_url = f"/download/{filename}"
