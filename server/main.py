@@ -42,26 +42,51 @@ genai.configure(api_key=GEMINI_API_KEY)
 
 # Initialize Gemini model
 model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash",
-    system_instruction="""You are a coding engine specialized in generating Python code using python-docx library.
-You must output ONLY valid Python code that creates a DOCX document based on the user's requirements.
-Do not provide any explanations, comments, or introductory text.
-Do not format with Markdown backticks.
+    model_name="gemini-2.0-flash-exp",
+    system_instruction="""You are an expert document automation engineer specializing in `python-docx`.
+Your goal is to generate Python code that creates highly professional, visually appealing, and comprehensive DOCX documents.
 
-The code must:
-1. Import necessary modules from docx (Document, Inches, Pt, RGBColor, etc.)
-2. Create a Document object
-3. Add content based on the user's prompt (headings, paragraphs, tables, images, etc.)
-4. Save the document to the provided file path
-5. Use the variable 'output_path' for the file path (this will be provided)
+RULES:
+1. **Output ONLY executable Python code**. No markdown backticks, no explanations, no comments.
+2. **Professional Styling**:
+   - Use a clean, modern font (e.g., Arial, Calibri, or Open Sans) if possible, or stick to standard professional fonts.
+   - Use appropriate font sizes: 14pt-16pt for headings, 11pt-12pt for body text.
+   - Add proper spacing between paragraphs (e.g., `paragraph_format.space_after = Pt(12)`).
+   - Use bold and italics for emphasis where appropriate.
+3. **Structure & Length**:
+   - The document must be **EXTENSIVE** and **DETAILED**. Expand significantly on the user's prompt.
+   - Use a clear hierarchy: Title -> Heading 1 -> Heading 2 -> Body Text.
+   - Include clear sections (e.g., Introduction, Detailed Analysis, Key Findings, Conclusion).
+   - Incorporate lists (bullet points and numbered lists) to break up text.
+   - Use tables for structured data if relevant.
+4. **Execution**:
+   - The code must be complete and error-free.
+   - Use the variable `output_path` for saving the file.
+   - Imports must include all necessary classes from `docx`, `docx.shared`, `docx.enum.text`.
 
-Example structure:
+Example of expected code structure:
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 doc = Document()
-# Add content based on user requirements
+
+# styles
+style = doc.styles['Normal']
+font = style.font
+font.name = 'Calibri'
+font.size = Pt(11)
+
+# Title
+title = doc.add_heading('Professional Report', 0)
+title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+# Section
+doc.add_heading('1. Introduction', level=1)
+p = doc.add_paragraph('This is a detailed introduction...')
+p.paragraph_format.space_after = Pt(12)
+
+# Save
 doc.save(output_path)
 """
 )
@@ -111,11 +136,15 @@ async def generate_document(request: DocumentRequest):
         output_path = GENERATED_DIR / filename
         
         # Create prompt for Gemini
-        gemini_prompt = f"""Generate Python code using python-docx to create a document with the following requirements:
+        gemini_prompt = f"""Generate Python code using python-docx to create a DETAILED, LONG, and PROFESSIONALLY FORMATTED document based on the following requirements:
 
 {request.prompt}
 
-Remember to use 'output_path' as the variable for the file path."""
+Requirements:
+- Make the content extensive and ellaborate.
+- Use professional formatting (headings, spacing, fonts).
+- Ensure the code handles the saving to 'output_path'.
+"""
         
         # Generate code using Gemini
         response = model.generate_content(gemini_prompt)
