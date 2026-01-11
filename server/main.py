@@ -85,7 +85,7 @@ genai.configure(api_key=GEMINI_API_KEY)
 
 # Initialize Gemini model
 model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash",
+    model_name="gemini-3-flash-preview",
     system_instruction="""You are an expert document automation engineer specializing in `python-docx`.
 Your goal is to generate Python code that creates highly professional, visually appealing, and comprehensive DOCX documents.
 
