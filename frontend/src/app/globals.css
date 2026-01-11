@@ -133,6 +133,10 @@ body {
   min-height: 100vh;
 }
 
+button {
+  cursor: pointer;
+}
+
 /* Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 8px;
