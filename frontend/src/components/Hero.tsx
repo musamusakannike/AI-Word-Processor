@@ -1,6 +1,7 @@
 'use client';
 
-import { Sparkles, FileText, Zap, ArrowRight } from 'lucide-react';
+import { Sparkles, FileText, Zap } from 'lucide-react';
+import Link from 'next/link';
 
 export default function Hero() {
     return (
@@ -12,9 +13,8 @@ export default function Hero() {
                 {/* Badge */}
                 <div className="animate-fade-in opacity-0" style={{ animationDelay: '0.1s' }}>
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-sm mb-8 hover:bg-white/50 dark:hover:bg-slate-800/50 transition-colors cursor-default">
-                        <Sparkles className="w-4 h-4 text-primary animate-pulse" />
                         <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                            Now with GPT-4 Turbo
+                            By <Link href="https://github.com/musamusakannike" target="_blank" className="underline">Musamusakannike</Link>
                         </span>
                     </div>
                 </div>
