@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import {
@@ -51,6 +52,7 @@ const ToolbarDivider = () => (
 );
 
 export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
+    const isProgrammaticUpdateRef = useRef(false);
     const editor = useEditor({
         extensions: [
             StarterKit.configure({
@@ -62,6 +64,9 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         content: content,
         immediatelyRender: false,
         onUpdate: ({ editor }) => {
+            if (isProgrammaticUpdateRef.current) {
+                return;
+            }
             onChange(editor.getHTML());
         },
         editorProps: {
@@ -70,6 +75,23 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
             },
         },
     });
+
+    useEffect(() => {
+        if (!editor) {
+            return;
+        }
+
+        const current = editor.getHTML();
+        if (current === content) {
+            return;
+        }
+
+        isProgrammaticUpdateRef.current = true;
+        editor.commands.setContent(content, false);
+        queueMicrotask(() => {
+            isProgrammaticUpdateRef.current = false;
+        });
+    }, [content, editor]);
 
     if (!editor) {
         return null;
