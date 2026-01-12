@@ -14,7 +14,7 @@ A complete **FastAPI server** that uses **Google's Gemini AI** to generate DOCX 
 
 2. **`requirements.txt`**
    - All necessary Python dependencies
-   - FastAPI, uvicorn, python-docx, google-generativeai
+   - FastAPI, uvicorn, python-docx, google-genai
 
 3. **`test_client.py`** (95 lines)
    - Ready-to-use test script

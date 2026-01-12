@@ -3,7 +3,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import os
 import uuid
 from pathlib import Path
@@ -83,12 +84,10 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise ValueError("GEMINI_API_KEY environment variable is not set")
 
-genai.configure(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY)
+MODEL_NAME = "gemini-2.0-flash"
 
-# Initialize Gemini model
-model = genai.GenerativeModel(
-    model_name="gemini-3-flash-preview",
-    system_instruction="""You are an expert document automation engineer specializing in `python-docx`.
+DOC_GEN_SYS_INSTRUCT = """You are an expert document automation engineer specializing in `python-docx`.
 Your goal is to generate Python code that creates highly professional, visually appealing, and comprehensive DOCX documents.
 
 RULES:
@@ -134,11 +133,8 @@ p.paragraph_format.space_after = Pt(12)
 # Save
 doc.save(output_path)
 """
-)
 
-edit_model = genai.GenerativeModel(
-    model_name="gemini-3-flash-preview",
-    system_instruction="""You are an expert Word document editor.
+EDIT_SYS_INSTRUCT = """You are an expert Word document editor.
 You will be given an HTML document and an instruction.
 
 RULES:
@@ -146,8 +142,7 @@ RULES:
 2. Do not wrap the output in markdown backticks.
 3. Preserve the document structure as much as possible.
 4. Apply the instruction precisely.
-""",
-)
+"""
 
 
 def _strip_code_fences(text: str) -> str:
@@ -329,16 +324,22 @@ async def ai_edit_document(request: AiEditRequest):
 
         for attempt in range(max_retries):
             try:
-                if attempt == 0:
-                    response = edit_model.generate_content(prompt)
-                else:
-                    retry_prompt = (
+                content_to_send = prompt
+                if attempt > 0:
+                    content_to_send = (
                         "The previous attempt failed. Fix the output and return ONLY valid HTML.\n\n"
                         f"ERROR:\n{str(last_error)}\n\n"
                         f"INSTRUCTION:\n{request.instruction}\n\n"
                         f"HTML:\n{request.html}\n"
                     )
-                    response = edit_model.generate_content(retry_prompt)
+
+                response = client.models.generate_content(
+                    model=MODEL_NAME,
+                    contents=content_to_send,
+                    config=types.GenerateContentConfig(
+                        system_instruction=EDIT_SYS_INSTRUCT
+                    )
+                )
 
                 updated_html = _strip_code_fences(response.text)
                 if not updated_html:
@@ -399,10 +400,11 @@ Requirements:
         
         for attempt in range(max_retries):
             try:
+                content_to_send = gemini_prompt
                 if attempt > 0:
                     print(f"Attempt {attempt + 1}: Retrying due to error: {last_error}")
                     # Refine prompt with error information
-                    retry_prompt = f"""The previous Python code you generated failed with the following error:
+                    content_to_send = f"""The previous Python code you generated failed with the following error:
 {str(last_error)}
 
 The code that failed was:
@@ -412,9 +414,14 @@ Please FIX the error and provide the corrected, complete executable Python code.
 Ensure all imports are correct and the file is saved to 'output_path'.
 output_path variable is available in the environment, do not define it, just use it.
 """
-                    response = model.generate_content(retry_prompt)
-                else:
-                    response = model.generate_content(gemini_prompt)
+                
+                response = client.models.generate_content(
+                    model=MODEL_NAME,
+                    contents=content_to_send,
+                    config=types.GenerateContentConfig(
+                        system_instruction=DOC_GEN_SYS_INSTRUCT
+                    )
+                )
 
                 raw_code = response.text.strip()
                 
