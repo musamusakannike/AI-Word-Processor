@@ -87,7 +87,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         }
 
         isProgrammaticUpdateRef.current = true;
-        editor.commands.setContent(content, false);
+        editor.commands.setContent(content, { emitUpdate: false });
         queueMicrotask(() => {
             isProgrammaticUpdateRef.current = false;
         });
