@@ -85,7 +85,7 @@ if not GEMINI_API_KEY:
     raise ValueError("GEMINI_API_KEY environment variable is not set")
 
 client = genai.Client(api_key=GEMINI_API_KEY)
-MODEL_NAME = "gemini-3.0-flash"
+MODEL_NAME = "gemini-3-flash-preview"
 
 DOC_GEN_SYS_INSTRUCT = """You are an expert document automation engineer specializing in `python-docx`.
 Your goal is to generate Python code that creates highly professional, visually appealing, and comprehensive DOCX documents.
