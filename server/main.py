@@ -16,6 +16,11 @@ from contextlib import asynccontextmanager
 from html.parser import HTMLParser
 from docx import Document
 import io
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, ListFlowable, ListItem
+from reportlab.lib.enums import TA_LEFT, TA_CENTER
 
 # Load environment variables from .env file
 load_dotenv()
@@ -37,7 +42,9 @@ async def periodic_cleanup():
             current_time = datetime.now().timestamp()
             max_age_seconds = 600  # 10 minutes (10 * 60)
             
-            for file_path in GENERATED_DIR.glob("*.docx"):
+            for file_path in GENERATED_DIR.glob("*"):
+                if not file_path.suffix.lower() in [".docx", ".pdf"]:
+                    continue
                 try:
                     if not file_path.exists():
                         continue
@@ -239,6 +246,127 @@ def html_to_docx_bytes(html: str) -> bytes:
     return data
 
 
+class _HtmlToPdfParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self._story: list = []
+        self._styles = getSampleStyleSheet()
+        self._block_tag: str | None = None
+        self._heading_level: int | None = None
+        self._list_mode: str | None = None
+        self._buffer: list[str] = []
+        self._list_items: list = []
+
+    def handle_starttag(self, tag: str, attrs):
+        if tag in {"p", "h1", "h2", "h3", "li", "blockquote"}:
+            self._flush_block()
+            self._block_tag = tag
+            if tag == "h1":
+                self._heading_level = 1
+            elif tag == "h2":
+                self._heading_level = 2
+            elif tag == "h3":
+                self._heading_level = 3
+            else:
+                self._heading_level = None
+        elif tag == "ul":
+            self._list_mode = "bullet"
+        elif tag == "ol":
+            self._list_mode = "number"
+        elif tag == "br":
+            self._buffer.append("<br/>")
+
+    def handle_endtag(self, tag: str):
+        if tag in {"p", "h1", "h2", "h3", "li", "blockquote"}:
+            self._flush_block()
+            self._block_tag = None
+            self._heading_level = None
+        elif tag in {"ul", "ol"}:
+            if self._list_items:
+                list_flowable = ListFlowable(
+                    self._list_items,
+                    bulletType='bullet' if self._list_mode == "bullet" else '1',
+                    leftIndent=20,
+                    bulletOffsetY=-2
+                )
+                self._story.append(list_flowable)
+                self._story.append(Spacer(1, 0.1 * inch))
+                self._list_items = []
+            self._list_mode = None
+
+    def handle_data(self, data: str):
+        if not data:
+            return
+        self._buffer.append(data)
+
+    def _flush_block(self):
+        text = "".join(self._buffer).strip()
+        self._buffer = []
+        if not text:
+            return
+
+        if self._heading_level == 1:
+            style = self._styles['Heading1']
+            self._story.append(Paragraph(text, style))
+            self._story.append(Spacer(1, 0.2 * inch))
+        elif self._heading_level == 2:
+            style = self._styles['Heading2']
+            self._story.append(Paragraph(text, style))
+            self._story.append(Spacer(1, 0.15 * inch))
+        elif self._heading_level == 3:
+            style = self._styles['Heading3']
+            self._story.append(Paragraph(text, style))
+            self._story.append(Spacer(1, 0.1 * inch))
+        elif self._block_tag == "li":
+            self._list_items.append(Paragraph(text, self._styles['BodyText']))
+        elif self._block_tag == "blockquote":
+            quote_style = ParagraphStyle(
+                'Quote',
+                parent=self._styles['BodyText'],
+                leftIndent=20,
+                rightIndent=20,
+                textColor='#666666',
+                fontName='Helvetica-Oblique'
+            )
+            self._story.append(Paragraph(text, quote_style))
+            self._story.append(Spacer(1, 0.1 * inch))
+        else:
+            self._story.append(Paragraph(text, self._styles['BodyText']))
+            self._story.append(Spacer(1, 0.1 * inch))
+
+    def get_story(self):
+        self._flush_block()
+        return self._story
+
+
+def html_to_pdf_bytes(html: str) -> bytes:
+    tmp_id = str(uuid.uuid4())
+    tmp_path = GENERATED_DIR / f"tmp_{tmp_id}.pdf"
+    
+    doc = SimpleDocTemplate(
+        str(tmp_path),
+        pagesize=letter,
+        rightMargin=72,
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=72
+    )
+    
+    parser = _HtmlToPdfParser()
+    parser.feed(html)
+    parser.close()
+    
+    story = parser.get_story()
+    if not story:
+        story = [Paragraph("Empty document", getSampleStyleSheet()['BodyText'])]
+    
+    doc.build(story)
+    
+    data = tmp_path.read_bytes()
+    tmp_path.unlink(missing_ok=True)
+    return data
+
+
 def extract_text_from_docx(file_bytes: bytes) -> str:
     """Extract text from a DOCX file."""
     doc = Document(io.BytesIO(file_bytes))
@@ -313,6 +441,7 @@ async def root():
         "endpoints": {
             "POST /generate": "Generate a DOCX file from a prompt",
             "POST /export": "Export editor HTML to a DOCX file",
+            "POST /export-pdf": "Export editor HTML to a PDF file",
             "POST /ai/edit": "Apply an AI edit instruction to the current HTML document",
             "GET /download/{filename}": "Download a generated file"
         }
@@ -344,6 +473,35 @@ async def export_document(request: ExportRequest):
         return DocumentResponse(
             success=False,
             message="Failed to export document",
+            error=str(e),
+        )
+
+
+@app.post("/export-pdf", response_model=DocumentResponse)
+async def export_document_as_pdf(request: ExportRequest):
+    try:
+        file_id = str(uuid.uuid4())
+        raw_name = (request.filename or f"document_{file_id}.pdf").strip() or f"document_{file_id}.pdf"
+        safe_name = Path(raw_name).name
+        if not safe_name.lower().endswith(".pdf"):
+            safe_name = f"{safe_name}.pdf"
+
+        output_path = GENERATED_DIR / f"export_{file_id}_{safe_name}"
+        data = html_to_pdf_bytes(request.html)
+        output_path.write_bytes(data)
+
+        return DocumentResponse(
+            success=True,
+            message="PDF exported successfully",
+            download_url=f"/download/{output_path.name}",
+            filename=output_path.name,
+        )
+    except Exception as e:
+        error_trace = traceback.format_exc()
+        print(f"Error exporting PDF: {error_trace}")
+        return DocumentResponse(
+            success=False,
+            message="Failed to export PDF",
             error=str(e),
         )
 
@@ -592,13 +750,13 @@ output_path variable is available in the environment, do not define it, just use
 @app.get("/download/{filename}")
 async def download_file(filename: str):
     """
-    Download a generated DOCX file.
+    Download a generated file (DOCX or PDF).
     
     Args:
         filename: Name of the file to download
         
     Returns:
-        FileResponse with the DOCX file
+        FileResponse with the file
     """
     file_path = GENERATED_DIR / filename
     
@@ -608,10 +766,12 @@ async def download_file(filename: str):
             detail="This document has been deleted as it exceeded the 10-minute retention period. Please generate a new document."
         )
     
+    media_type = "application/pdf" if filename.lower().endswith(".pdf") else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    
     return FileResponse(
         path=str(file_path),
         filename=filename,
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        media_type=media_type
     )
 
 
@@ -630,11 +790,12 @@ async def cleanup_old_files(max_age_hours: int = 24):
     current_time = datetime.now().timestamp()
     max_age_seconds = max_age_hours * 3600
     
-    for file_path in GENERATED_DIR.glob("*.docx"):
-        file_age = current_time - file_path.stat().st_mtime
-        if file_age > max_age_seconds:
-            file_path.unlink()
-            deleted_count += 1
+    for file_path in GENERATED_DIR.glob("*"):
+        if file_path.suffix.lower() in [".docx", ".pdf"]:
+            file_age = current_time - file_path.stat().st_mtime
+            if file_age > max_age_seconds:
+                file_path.unlink()
+                deleted_count += 1
     
     return {
         "message": f"Cleaned up {deleted_count} old files",

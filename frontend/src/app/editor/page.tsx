@@ -45,6 +45,7 @@ export default function EditorPage() {
 
   const [isImporting, setIsImporting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [aiInstruction, setAiInstruction] = useState('');
   const [isAiWorking, setIsAiWorking] = useState(false);
@@ -116,6 +117,35 @@ export default function EditorPage() {
       setError(err.response?.data?.detail || err.message || 'Export failed.');
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    setIsExportingPdf(true);
+    setError(null);
+    setStatus(null);
+
+    try {
+      const response = await axios.post<ExportResponse>(`${API_BASE_URL}/export-pdf`, {
+        html: editorContent,
+        filename: `${documentName || 'document'}.pdf`,
+      });
+
+      if (!response.data.success) {
+        throw new Error(response.data.error || response.data.message || 'PDF export failed.');
+      }
+
+      if (!response.data.download_url) {
+        throw new Error('PDF export succeeded, but no download URL was returned.');
+      }
+
+      setStatus('PDF export ready.');
+      window.open(`${API_BASE_URL}${response.data.download_url}`, '_blank');
+    } catch (e: unknown) {
+      const err = e as { message?: string; response?: { data?: { detail?: string } } };
+      setError(err.response?.data?.detail || err.message || 'PDF export failed.');
+    } finally {
+      setIsExportingPdf(false);
     }
   };
 
@@ -237,6 +267,16 @@ export default function EditorPage() {
               >
                 {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                 Export DOCX
+              </button>
+
+              <button
+                type="button"
+                onClick={handleExportPdf}
+                disabled={isExportingPdf}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold shadow-lg shadow-rose-600/25 transition-all disabled:opacity-50"
+              >
+                {isExportingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                Export PDF
               </button>
 
               <button
