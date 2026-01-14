@@ -157,6 +157,19 @@ RULES:
 4. Apply the instruction precisely.
 """
 
+REFINE_SYS_INSTRUCT = """You are an expert writing assistant specializing in text refinement.
+Your goal is to improve the given text by making it more professional, concise, and clear.
+
+RULES:
+1. Output ONLY the refined text.
+2. Do not add explanations, markdown, or any wrapper text.
+3. Maintain the original meaning and intent.
+4. Improve clarity, grammar, and professionalism.
+5. Make it more concise while preserving key information.
+6. Use active voice where appropriate.
+7. Ensure proper punctuation and sentence structure.
+"""
+
 
 def _strip_code_fences(text: str) -> str:
     cleaned = text.strip()
@@ -429,6 +442,17 @@ class AiEditResponse(BaseModel):
     success: bool
     message: str
     updated_html: str | None = None
+    error: str | None = None
+
+
+class AiRefineRequest(BaseModel):
+    text: str
+
+
+class AiRefineResponse(BaseModel):
+    success: bool
+    message: str
+    refined_text: str | None = None
     error: str | None = None
 
 
@@ -925,6 +949,7 @@ async def root():
             "POST /export": "Export editor HTML to a DOCX file",
             "POST /export-pdf": "Export editor HTML to a PDF file",
             "POST /ai/edit": "Apply an AI edit instruction to the current HTML document",
+            "POST /ai/refine": "Refine selected text to be more professional and concise",
             "GET /download/{filename}": "Download a generated file"
         }
     }
@@ -1000,6 +1025,57 @@ async def export_document_as_pdf(request: ExportRequest):
             message="Failed to export PDF",
             error=str(e),
         )
+
+
+@app.post("/ai/refine", response_model=AiRefineResponse)
+async def ai_refine_text(request: AiRefineRequest):
+    try:
+        if not request.text.strip():
+            return AiRefineResponse(success=False, message="Missing text", error="Text is required")
+
+        prompt = f"Refine and improve the following text:\n\n{request.text}"
+
+        max_retries = 3
+        last_error = None
+
+        for attempt in range(max_retries):
+            try:
+                content_to_send = prompt
+                if attempt > 0:
+                    content_to_send = (
+                        "The previous attempt failed. Please provide ONLY the refined text without any explanations or markdown.\n\n"
+                        f"ERROR:\n{str(last_error)}\n\n"
+                        f"TEXT TO REFINE:\n{request.text}\n"
+                    )
+
+                response = client.models.generate_content(
+                    model=MODEL_NAME,
+                    contents=content_to_send,
+                    config=types.GenerateContentConfig(
+                        system_instruction=REFINE_SYS_INSTRUCT
+                    )
+                )
+
+                refined_text = response.text.strip()
+                if not refined_text:
+                    raise Exception("Empty AI response")
+
+                return AiRefineResponse(
+                    success=True,
+                    message="Text refined successfully",
+                    refined_text=refined_text,
+                )
+            except Exception as e:
+                last_error = e
+                if attempt == max_retries - 1:
+                    raise
+
+        return AiRefineResponse(success=False, message="AI refinement failed", error=str(last_error))
+
+    except Exception as e:
+        error_trace = traceback.format_exc()
+        print(f"Error refining text: {error_trace}")
+        return AiRefineResponse(success=False, message="AI refinement failed", error=str(e))
 
 
 @app.post("/ai/edit", response_model=AiEditResponse)

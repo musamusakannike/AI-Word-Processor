@@ -1,8 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableHeader } from '@tiptap/extension-table-header';
+import { TableCell } from '@tiptap/extension-table-cell';
 import {
     Bold,
     Italic,
@@ -16,12 +20,18 @@ import {
     Code,
     Undo,
     Redo,
+    Table as TableIcon,
+    Sparkles,
+    Loader2,
 } from 'lucide-react';
+import axios from 'axios';
 
 interface TiptapEditorProps {
     content: string;
     onChange: (content: string) => void;
 }
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 // Define toolbar button component outside of render
 const ToolbarButton = ({
@@ -53,11 +63,31 @@ const ToolbarDivider = () => (
 
 export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
     const isProgrammaticUpdateRef = useRef(false);
+    const [isRefining, setIsRefining] = useState(false);
+    const [refinementError, setRefinementError] = useState<string | null>(null);
+    
     const editor = useEditor({
         extensions: [
             StarterKit.configure({
                 heading: {
                     levels: [1, 2, 3],
+                },
+            }),
+            Table.configure({
+                resizable: true,
+                HTMLAttributes: {
+                    class: 'border-collapse border border-gray-300 dark:border-gray-600',
+                },
+            }),
+            TableRow,
+            TableHeader.configure({
+                HTMLAttributes: {
+                    class: 'bg-gray-100 dark:bg-gray-700 font-bold',
+                },
+            }),
+            TableCell.configure({
+                HTMLAttributes: {
+                    class: 'border border-gray-300 dark:border-gray-600 px-3 py-2',
                 },
             }),
         ],
@@ -93,6 +123,40 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         });
     }, [content, editor]);
 
+    const handleAiRefine = async () => {
+        if (!editor) return;
+        
+        const { from, to } = editor.state.selection;
+        if (from === to) {
+            setRefinementError('Please select some text to refine');
+            setTimeout(() => setRefinementError(null), 3000);
+            return;
+        }
+        
+        const selectedText = editor.state.doc.textBetween(from, to, ' ');
+        
+        setIsRefining(true);
+        setRefinementError(null);
+        
+        try {
+            const response = await axios.post(`${API_BASE_URL}/ai/refine`, {
+                text: selectedText,
+            });
+            
+            if (response.data.success && response.data.refined_text) {
+                editor.chain().focus().deleteSelection().insertContent(response.data.refined_text).run();
+            } else {
+                throw new Error(response.data.error || 'Failed to refine text');
+            }
+        } catch (error: any) {
+            console.error('Error refining text:', error);
+            setRefinementError(error.response?.data?.error || error.message || 'Failed to refine text');
+            setTimeout(() => setRefinementError(null), 5000);
+        } finally {
+            setIsRefining(false);
+        }
+    };
+    
     if (!editor) {
         return null;
     }
@@ -201,7 +265,83 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                     >
                         <Code size={18} />
                     </ToolbarButton>
+
+                    <ToolbarDivider />
+
+                    {/* Table Controls */}
+                    <ToolbarButton
+                        onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+                        title="Insert Table"
+                    >
+                        <TableIcon size={18} />
+                    </ToolbarButton>
+                    {editor.isActive('table') && (
+                        <>
+                            <ToolbarButton
+                                onClick={() => editor.chain().focus().addColumnBefore().run()}
+                                title="Add Column Before"
+                            >
+                                <span className="text-xs font-bold">C+</span>
+                            </ToolbarButton>
+                            <ToolbarButton
+                                onClick={() => editor.chain().focus().addRowBefore().run()}
+                                title="Add Row Before"
+                            >
+                                <span className="text-xs font-bold">R+</span>
+                            </ToolbarButton>
+                            <ToolbarButton
+                                onClick={() => editor.chain().focus().deleteColumn().run()}
+                                title="Delete Column"
+                            >
+                                <span className="text-xs font-bold">C-</span>
+                            </ToolbarButton>
+                            <ToolbarButton
+                                onClick={() => editor.chain().focus().deleteRow().run()}
+                                title="Delete Row"
+                            >
+                                <span className="text-xs font-bold">R-</span>
+                            </ToolbarButton>
+                            <ToolbarButton
+                                onClick={() => editor.chain().focus().deleteTable().run()}
+                                title="Delete Table"
+                            >
+                                <span className="text-xs font-bold">Del</span>
+                            </ToolbarButton>
+                        </>
+                    )}
+
+                    <ToolbarDivider />
+
+                    {/* AI Refine Button */}
+                    <button
+                        onClick={handleAiRefine}
+                        disabled={isRefining}
+                        className={`px-3 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 ${
+                            isRefining
+                                ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                                : 'bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white shadow-md hover:shadow-lg'
+                        }`}
+                        title="Refine selected text with AI"
+                        type="button"
+                    >
+                        {isRefining ? (
+                            <>
+                                <Loader2 size={16} className="animate-spin" />
+                                <span className="text-sm font-medium">Refining...</span>
+                            </>
+                        ) : (
+                            <>
+                                <Sparkles size={16} />
+                                <span className="text-sm font-medium">AI Refine</span>
+                            </>
+                        )}
+                    </button>
                 </div>
+                {refinementError && (
+                    <div className="mt-2 px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-sm rounded-lg">
+                        {refinementError}
+                    </div>
+                )}
             </div>
 
             {/* Editor Content */}
