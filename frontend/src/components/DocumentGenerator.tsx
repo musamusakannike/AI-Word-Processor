@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import TiptapEditor from './TiptapEditor';
 import { Wand2, Download, Loader2, AlertCircle, CheckCircle2, Lightbulb, FileEdit, ArrowRight, Upload, X, FileText, File as FileIcon } from 'lucide-react';
 import axios from 'axios';
@@ -87,6 +87,15 @@ export default function DocumentGenerator() {
         setSelectedFile(null);
         setFileError(null);
     };
+
+    useEffect(() => {
+        const templatePrompt = sessionStorage.getItem('selectedTemplatePrompt');
+        if (templatePrompt) {
+            setPrompt(templatePrompt);
+            sessionStorage.removeItem('selectedTemplatePrompt');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, []);
 
     const handleGenerate = async () => {
         if (!prompt.trim()) {

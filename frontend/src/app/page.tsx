@@ -1,8 +1,19 @@
+'use client';
+
 import Hero from '@/components/Hero';
 import Footer from '@/components/Footer';
+import TemplateGallery from '@/components/TemplateGallery';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
+  const router = useRouter();
+
+  const handleTemplateSelect = (prompt: string) => {
+    sessionStorage.setItem('selectedTemplatePrompt', prompt);
+    router.push('/generate');
+  };
+
   return (
     <div className="min-h-screen flex flex-col relative bg-background selection:bg-primary/30">
 
@@ -19,7 +30,7 @@ export default function Home() {
 
       <main className="flex-1 relative z-10 flex flex-col">
         <Hero />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
           <div className="glass-card rounded-3xl p-8 border border-white/20 dark:border-white/10 shadow-xl">
             <div className="flex flex-col gap-6">
               <div>
@@ -43,6 +54,10 @@ export default function Home() {
                 </Link>
               </div>
             </div>
+          </div>
+
+          <div className="glass-card rounded-3xl p-8 border border-white/20 dark:border-white/10 shadow-xl">
+            <TemplateGallery onSelectTemplate={handleTemplateSelect} />
           </div>
         </div>
       </main>

@@ -432,6 +432,487 @@ class AiEditResponse(BaseModel):
     error: str | None = None
 
 
+class Template(BaseModel):
+    id: str
+    title: str
+    description: str
+    category: str
+    prompt: str
+    icon: str
+
+
+TEMPLATES = [
+    Template(
+        id="modern-resume",
+        title="Modern Resume",
+        description="Professional resume with clean design and modern formatting",
+        category="Professional",
+        prompt="""Create a Modern Resume using the following specifications:
+
+FORMATTING REQUIREMENTS:
+- Use Calibri font, 11pt for body text, 14pt for name/header
+- Professional blue header (#2563EB) with white text for the name section
+- Clear section headings in bold, 12pt
+- Consistent spacing: 12pt after paragraphs, 6pt after headings
+- Use bullet points for achievements and responsibilities
+
+STRUCTURE:
+1. Header Section:
+   - Full Name (centered, bold, 16pt)
+   - Contact information below name (email, phone, LinkedIn, location)
+   - Professional summary (2-3 sentences highlighting key strengths)
+
+2. Professional Experience:
+   - Job Title | Company Name | Dates
+   - 3-5 bullet points per role highlighting achievements with metrics
+   - Use action verbs (Led, Developed, Implemented, Achieved)
+
+3. Education:
+   - Degree, Major | University Name | Graduation Year
+   - Relevant coursework or honors (if applicable)
+
+4. Skills:
+   - Technical Skills: List relevant technical competencies
+   - Soft Skills: Communication, Leadership, Problem-solving, etc.
+
+5. Certifications (if applicable):
+   - Certification Name | Issuing Organization | Year
+
+Make the content comprehensive with realistic examples. Include quantifiable achievements (e.g., "Increased sales by 25%", "Managed team of 8 developers").""",
+        icon="briefcase"
+    ),
+    Template(
+        id="invoice",
+        title="Professional Invoice",
+        description="Clean and detailed invoice template for business transactions",
+        category="Business",
+        prompt="""Create a Professional Invoice using the following specifications:
+
+FORMATTING REQUIREMENTS:
+- Use Arial font, 11pt for body text
+- Company header with logo placeholder and contact details
+- Clear table structure for line items
+- Professional color scheme (navy blue #1E3A8A for headers)
+- Bold headings and proper alignment
+
+STRUCTURE:
+1. Header Section:
+   - "INVOICE" title (centered, bold, 20pt)
+   - Company Name and full contact details (address, phone, email, website)
+   - Invoice Number: INV-2024-001
+   - Invoice Date: [Current Date]
+   - Due Date: [30 days from invoice date]
+
+2. Bill To Section:
+   - Client Name
+   - Client Company
+   - Client Address
+   - Client Contact Information
+
+3. Invoice Details Table:
+   - Columns: Item/Description | Quantity | Unit Price | Total
+   - Include 5-7 sample line items with realistic services/products
+   - Each item should have detailed description
+
+4. Summary Section:
+   - Subtotal
+   - Tax (10% or applicable rate)
+   - Discount (if any)
+   - Total Amount Due (bold, highlighted)
+
+5. Payment Information:
+   - Payment Terms: Net 30
+   - Accepted Payment Methods
+   - Bank Account Details (if applicable)
+
+6. Footer:
+   - Thank you message
+   - Terms and conditions summary
+   - Late payment policy
+
+Make it comprehensive and professional with realistic business examples.""",
+        icon="receipt"
+    ),
+    Template(
+        id="legal-contract",
+        title="Legal Contract",
+        description="Formal legal agreement template with standard clauses",
+        category="Legal",
+        prompt="""Create a Legal Contract using the following specifications:
+
+FORMATTING REQUIREMENTS:
+- Use Times New Roman font, 12pt for body text
+- Professional, formal layout with proper legal formatting
+- Numbered sections and subsections (1.1, 1.2, etc.)
+- Bold headings for major sections
+- Justified text alignment for body paragraphs
+- 1.5 line spacing for readability
+
+STRUCTURE:
+1. Title and Header:
+   - "SERVICE AGREEMENT" or "CONTRACT FOR SERVICES" (centered, bold, 14pt)
+   - Date of Agreement
+   - Parties Involved (Full legal names and addresses)
+
+2. Recitals Section:
+   - WHEREAS clauses explaining the background and purpose
+
+3. Main Body - Key Sections:
+   
+   3.1 DEFINITIONS
+   - Define key terms used throughout the contract
+   
+   3.2 SCOPE OF SERVICES
+   - Detailed description of services to be provided
+   - Deliverables and specifications
+   
+   3.3 TERM AND TERMINATION
+   - Contract duration
+   - Termination conditions and notice periods
+   - Effect of termination
+   
+   3.4 COMPENSATION AND PAYMENT
+   - Payment amount and schedule
+   - Payment method
+   - Late payment provisions
+   
+   3.5 CONFIDENTIALITY
+   - Non-disclosure obligations
+   - Exceptions to confidentiality
+   
+   3.6 INTELLECTUAL PROPERTY
+   - Ownership of work product
+   - License grants (if any)
+   
+   3.7 WARRANTIES AND REPRESENTATIONS
+   - Mutual warranties
+   - Disclaimer of other warranties
+   
+   3.8 LIMITATION OF LIABILITY
+   - Liability caps
+   - Exclusions
+   
+   3.9 INDEMNIFICATION
+   - Indemnity obligations of each party
+   
+   3.10 GENERAL PROVISIONS
+   - Governing law and jurisdiction
+   - Entire agreement clause
+   - Amendment procedures
+   - Severability
+   - Force majeure
+   - Notices
+
+4. Signature Block:
+   - Signature lines for all parties
+   - Date fields
+   - Witness signature lines (if required)
+
+Make this comprehensive with detailed, realistic legal language appropriate for a professional services agreement.""",
+        icon="file-text"
+    ),
+    Template(
+        id="business-proposal",
+        title="Business Proposal",
+        description="Comprehensive proposal for business projects and partnerships",
+        category="Business",
+        prompt="""Create a Comprehensive Business Proposal using the following specifications:
+
+FORMATTING REQUIREMENTS:
+- Use Calibri or Arial font, 11pt for body text, larger for headings
+- Professional cover page with title and company branding
+- Clear hierarchy: Title (16pt) > Heading 1 (14pt) > Heading 2 (12pt) > Body (11pt)
+- Use tables for budget breakdowns and timelines
+- Include bullet points for key benefits and deliverables
+- Color accents in blue (#2563EB) for headings and important elements
+
+STRUCTURE:
+
+1. COVER PAGE
+   - Proposal Title
+   - Prepared For: [Client Name]
+   - Prepared By: [Your Company]
+   - Date
+   - Confidentiality Notice
+
+2. EXECUTIVE SUMMARY (1-2 pages)
+   - Brief overview of the proposal
+   - Key benefits and value proposition
+   - Investment required and expected ROI
+   - Call to action
+
+3. COMPANY OVERVIEW
+   - About your company
+   - Mission and vision
+   - Core competencies
+   - Relevant experience and past successes
+   - Team credentials
+
+4. PROBLEM STATEMENT
+   - Current challenges faced by the client
+   - Market analysis and context
+   - Impact of not addressing the problem
+   - Opportunity for improvement
+
+5. PROPOSED SOLUTION
+   - Detailed description of your solution
+   - How it addresses each problem point
+   - Unique value proposition
+   - Technology/methodology to be used
+   - Innovation and competitive advantages
+
+6. IMPLEMENTATION PLAN
+   - Phase-by-phase breakdown
+   - Detailed timeline with milestones (use table format)
+   - Resource allocation
+   - Key deliverables for each phase
+   - Quality assurance measures
+
+7. BUDGET AND PRICING
+   - Itemized cost breakdown (use professional table)
+   - Payment schedule
+   - What's included vs. optional add-ons
+   - ROI analysis and cost-benefit comparison
+
+8. RISK ASSESSMENT AND MITIGATION
+   - Potential risks identified
+   - Mitigation strategies for each risk
+   - Contingency plans
+
+9. SUCCESS METRICS
+   - KPIs to measure success
+   - Reporting frequency and format
+   - Evaluation criteria
+
+10. TERMS AND CONDITIONS
+    - Project scope boundaries
+    - Assumptions and dependencies
+    - Change management process
+    - Warranty and support terms
+
+11. CONCLUSION AND NEXT STEPS
+    - Summary of key points
+    - Clear call to action
+    - Contact information
+    - Proposal validity period
+
+Make this extensive and professional with realistic business scenarios, detailed timelines, and comprehensive budget tables.""",
+        icon="presentation"
+    ),
+    Template(
+        id="meeting-minutes",
+        title="Meeting Minutes",
+        description="Structured template for recording meeting discussions and action items",
+        category="Professional",
+        prompt="""Create Professional Meeting Minutes using the following specifications:
+
+FORMATTING REQUIREMENTS:
+- Use Arial or Calibri font, 11pt for body text
+- Clear section headers in bold, 12pt
+- Use tables for attendees and action items
+- Bullet points for discussion points
+- Consistent spacing and professional layout
+
+STRUCTURE:
+
+1. HEADER SECTION
+   - Meeting Title (bold, 14pt)
+   - Date and Time
+   - Location/Platform (e.g., Conference Room A / Zoom)
+   - Meeting Duration
+
+2. ATTENDEES
+   - Present: (list all attendees with titles)
+   - Absent: (list with reasons if known)
+   - Guests/Special Attendees: (if any)
+
+3. AGENDA ITEMS
+   - List of topics to be covered
+   - Time allocation for each item
+
+4. MEETING OBJECTIVES
+   - Primary goals of the meeting
+   - Expected outcomes
+
+5. DISCUSSION POINTS (Organized by Agenda Item)
+   For each agenda item:
+   - Topic heading
+   - Key points discussed (bullet points)
+   - Decisions made
+   - Concerns raised
+   - Data/metrics shared
+
+6. ACTION ITEMS TABLE
+   Create a comprehensive table with columns:
+   - Action Item Description
+   - Assigned To
+   - Due Date
+   - Priority (High/Medium/Low)
+   - Status
+   
+   Include 8-10 realistic action items
+
+7. DECISIONS MADE
+   - List all formal decisions
+   - Voting results (if applicable)
+   - Rationale for key decisions
+
+8. OPEN ISSUES
+   - Unresolved matters
+   - Items requiring further discussion
+   - Parking lot items for future meetings
+
+9. NEXT MEETING
+   - Proposed date and time
+   - Tentative agenda items
+   - Preparation required
+
+10. ADDITIONAL NOTES
+    - Important announcements
+    - Resource links or documents referenced
+    - Follow-up communications needed
+
+11. APPROVAL SECTION
+    - Minutes prepared by: [Name]
+    - Date prepared:
+    - Reviewed and approved by: [Name]
+    - Approval date:
+
+Make this detailed and realistic with substantive discussion points and actionable items.""",
+        icon="clipboard"
+    ),
+    Template(
+        id="project-charter",
+        title="Project Charter",
+        description="Formal document to authorize a project and define objectives",
+        category="Professional",
+        prompt="""Create a Comprehensive Project Charter using the following specifications:
+
+FORMATTING REQUIREMENTS:
+- Use Calibri font, 11pt for body text
+- Professional header with project name and logo placeholder
+- Clear section headings in bold, 13pt
+- Use tables for stakeholders, milestones, and budget
+- Color coding: Blue (#2563EB) for headings, Green for success criteria
+- Proper spacing: 12pt after paragraphs
+
+STRUCTURE:
+
+1. PROJECT OVERVIEW
+   - Project Name (bold, 16pt)
+   - Project Code/ID
+   - Project Manager
+   - Sponsor
+   - Date Created
+   - Version Number
+
+2. EXECUTIVE SUMMARY
+   - Brief project description (2-3 paragraphs)
+   - Strategic alignment with organizational goals
+   - Expected business value
+
+3. PROJECT PURPOSE AND JUSTIFICATION
+   - Business case
+   - Problem or opportunity being addressed
+   - Expected benefits and ROI
+   - Alignment with strategic objectives
+
+4. PROJECT OBJECTIVES (SMART Format)
+   - Specific, measurable objectives (5-7 objectives)
+   - Success criteria for each objective
+   - Timeline for achievement
+
+5. PROJECT SCOPE
+   - In Scope:
+     * Detailed list of what's included
+     * Deliverables
+     * Features and functionality
+   - Out of Scope:
+     * Explicitly excluded items
+     * Future phase considerations
+
+6. STAKEHOLDER ANALYSIS
+   Create a table with:
+   - Stakeholder Name/Group
+   - Role
+   - Interest Level
+   - Influence Level
+   - Communication Needs
+
+7. HIGH-LEVEL REQUIREMENTS
+   - Functional requirements (8-10 items)
+   - Technical requirements
+   - Business requirements
+   - Compliance/regulatory requirements
+
+8. PROJECT MILESTONES AND TIMELINE
+   Create a table with:
+   - Milestone Name
+   - Description
+   - Target Date
+   - Dependencies
+   - Deliverables
+   
+   Include 10-12 major milestones
+
+9. BUDGET SUMMARY
+   Create a detailed table:
+   - Cost Category
+   - Estimated Cost
+   - Notes
+   
+   Categories: Personnel, Technology, Equipment, Training, Contingency, etc.
+   - Total Project Budget
+   - Funding Source
+
+10. RESOURCE REQUIREMENTS
+    - Human resources (roles and FTE)
+    - Technology and tools
+    - Facilities and equipment
+    - External vendors/contractors
+
+11. ASSUMPTIONS
+    - List 6-8 key assumptions
+    - Impact if assumptions prove false
+
+12. CONSTRAINTS
+    - Time constraints
+    - Budget constraints
+    - Resource constraints
+    - Technical constraints
+    - Regulatory constraints
+
+13. RISKS AND MITIGATION
+    Create a table:
+    - Risk Description
+    - Probability (High/Medium/Low)
+    - Impact (High/Medium/Low)
+    - Mitigation Strategy
+
+14. SUCCESS CRITERIA
+    - Quantifiable metrics
+    - Quality standards
+    - Acceptance criteria
+    - Performance benchmarks
+
+15. PROJECT GOVERNANCE
+    - Steering committee members
+    - Decision-making authority
+    - Escalation process
+    - Reporting structure and frequency
+
+16. APPROVAL AND SIGN-OFF
+    - Project Sponsor signature line
+    - Project Manager signature line
+    - Key Stakeholder signature lines
+    - Date fields
+
+Make this comprehensive and professional with realistic project details, detailed tables, and substantive content for each section.""",
+        icon="folder"
+    )
+]
+
+
 @app.get("/")
 async def root():
     """Root endpoint with API information"""
@@ -439,12 +920,27 @@ async def root():
         "message": "AI Word Processor API",
         "version": "1.0.0",
         "endpoints": {
+            "GET /templates": "Get available document templates",
             "POST /generate": "Generate a DOCX file from a prompt",
             "POST /export": "Export editor HTML to a DOCX file",
             "POST /export-pdf": "Export editor HTML to a PDF file",
             "POST /ai/edit": "Apply an AI edit instruction to the current HTML document",
             "GET /download/{filename}": "Download a generated file"
         }
+    }
+
+
+@app.get("/templates")
+async def get_templates():
+    """
+    Get all available document templates.
+    
+    Returns:
+        List of templates with their metadata
+    """
+    return {
+        "success": True,
+        "templates": [template.model_dump() for template in TEMPLATES]
     }
 
 
