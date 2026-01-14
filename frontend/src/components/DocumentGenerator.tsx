@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import TiptapEditor from './TiptapEditor';
-import { Wand2, Download, Loader2, AlertCircle, CheckCircle2, Lightbulb, FileEdit, ArrowRight } from 'lucide-react';
+import { Wand2, Download, Loader2, AlertCircle, CheckCircle2, Lightbulb, FileEdit, ArrowRight, Upload, X, FileText, File as FileIcon } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -25,6 +25,69 @@ export default function DocumentGenerator() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
+    // File upload state
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [fileError, setFileError] = useState<string | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+
+    // File validation constants
+    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+    const ALLOWED_FILE_TYPES = ['application/pdf', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const ALLOWED_EXTENSIONS = ['.pdf', '.txt', '.docx'];
+
+    const validateFile = (file: File): string | null => {
+        const fileExt = '.' + file.name.split('.').pop()?.toLowerCase();
+        if (!ALLOWED_EXTENSIONS.includes(fileExt)) {
+            return `Unsupported file type. Allowed types: ${ALLOWED_EXTENSIONS.join(', ')}`;
+        }
+        if (file.size > MAX_FILE_SIZE) {
+            return `File size exceeds maximum allowed size of ${MAX_FILE_SIZE / (1024 * 1024)}MB`;
+        }
+        return null;
+    };
+
+    const handleFileSelect = (file: File) => {
+        const validationError = validateFile(file);
+        if (validationError) {
+            setFileError(validationError);
+            setSelectedFile(null);
+        } else {
+            setFileError(null);
+            setSelectedFile(file);
+        }
+    };
+
+    const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            handleFileSelect(file);
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const file = e.dataTransfer.files?.[0];
+        if (file) {
+            handleFileSelect(file);
+        }
+    };
+
+    const handleRemoveFile = () => {
+        setSelectedFile(null);
+        setFileError(null);
+    };
+
     const handleGenerate = async () => {
         if (!prompt.trim()) {
             setError('Please enter a prompt');
@@ -37,8 +100,17 @@ export default function DocumentGenerator() {
         setDownloadUrl(null);
 
         try {
-            const response = await axios.post<GenerateResponse>(`${API_BASE_URL}/generate`, {
-                prompt: prompt,
+            // Use FormData for file upload
+            const formData = new FormData();
+            formData.append('prompt', prompt);
+            if (selectedFile) {
+                formData.append('file', selectedFile);
+            }
+
+            const response = await axios.post<GenerateResponse>(`${API_BASE_URL}/generate`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
             });
 
             if (response.data.success) {
@@ -51,6 +123,7 @@ export default function DocumentGenerator() {
           <h2>✨ Document Generated Successfully!</h2>
           <p>Your document has been created and is ready for download.</p>
           <p><strong>Filename:</strong> ${response.data.filename}</p>
+          ${selectedFile ? `<p><strong>Source:</strong> ${selectedFile.name}</p>` : ''}
           <p>You can now download the DOCX file using the button below, or edit this content and generate a new document.</p>
         `);
             } else {
@@ -108,6 +181,89 @@ export default function DocumentGenerator() {
                                 <div className="absolute bottom-4 right-4 text-xs font-medium text-muted-foreground/60 bg-background/80 px-2 py-1 rounded-md backdrop-blur-md">
                                     {prompt.length} chars
                                 </div>
+                            </div>
+
+                            {/* File Upload Section */}
+                            <div className="space-y-3">
+                                <label className="block text-sm font-medium text-muted-foreground">
+                                    Source Document (Optional)
+                                </label>
+
+                                {!selectedFile ? (
+                                    <div
+                                        onDragOver={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={handleDrop}
+                                        className={`relative group border-2 border-dashed rounded-xl transition-all duration-300 ${isDragging
+                                            ? 'border-primary bg-primary/5 scale-[1.02]'
+                                            : 'border-border hover:border-primary/50 hover:bg-primary/5'
+                                            }`}
+                                    >
+                                        <input
+                                            type="file"
+                                            id="file-upload"
+                                            accept=".pdf,.txt,.docx"
+                                            onChange={handleFileInputChange}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                            disabled={isGenerating}
+                                        />
+                                        <div className="p-8 text-center">
+                                            <div className="flex justify-center mb-4">
+                                                <div className={`p-4 rounded-2xl transition-all duration-300 ${isDragging
+                                                    ? 'bg-primary/20 scale-110'
+                                                    : 'bg-primary/10 group-hover:bg-primary/15'
+                                                    }`}>
+                                                    <Upload className={`w-8 h-8 transition-colors ${isDragging ? 'text-primary' : 'text-primary/70'
+                                                        }`} />
+                                                </div>
+                                            </div>
+                                            <p className="text-sm font-medium text-foreground mb-1">
+                                                {isDragging ? 'Drop your file here' : 'Drag & drop your file here'}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground mb-3">
+                                                or click to browse
+                                            </p>
+                                            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                                <FileText className="w-3.5 h-3.5" />
+                                                <span>PDF, TXT, DOCX • Max 20MB</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="relative group border border-border rounded-xl p-4 bg-background/50 backdrop-blur-sm hover:border-primary/50 transition-all duration-300">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 bg-primary/10 rounded-xl shrink-0">
+                                                {selectedFile.name.endsWith('.pdf') ? (
+                                                    <FileText className="w-6 h-6 text-primary" />
+                                                ) : (
+                                                    <FileIcon className="w-6 h-6 text-primary" />
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-foreground truncate">
+                                                    {selectedFile.name}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {(selectedFile.size / 1024).toFixed(1)} KB
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={handleRemoveFile}
+                                                className="p-2 hover:bg-destructive/10 rounded-lg transition-colors group/btn"
+                                                disabled={isGenerating}
+                                            >
+                                                <X className="w-4 h-4 text-muted-foreground group-hover/btn:text-destructive transition-colors" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {fileError && (
+                                    <div className="flex items-start gap-2 p-3 bg-destructive/5 text-destructive border border-destructive/20 rounded-lg text-xs">
+                                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                                        <p>{fileError}</p>
+                                    </div>
+                                )}
                             </div>
 
                             <button
@@ -169,6 +325,11 @@ export default function DocumentGenerator() {
                             Try these examples
                         </h3>
                         <div className="grid grid-cols-1 gap-3">
+                            <ExamplePrompt
+                                onClick={() => setExamplePrompt('Write a professional cover letter based on the uploaded resume. Highlight relevant experience and skills for the target position.')}
+                                title="📎 Cover Letter from Resume"
+                                description="Upload your resume and generate a tailored cover letter."
+                            />
                             <ExamplePrompt
                                 onClick={() => setExamplePrompt('Create a meeting agenda for a quarterly business review with sections for objectives, discussion topics, action items, and next steps.')}
                                 title="Quarterly Business Review Agenda"

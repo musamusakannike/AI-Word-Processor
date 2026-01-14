@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +15,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from html.parser import HTMLParser
 from docx import Document
+import io
 
 # Load environment variables from .env file
 load_dotenv()
@@ -22,6 +23,11 @@ load_dotenv()
 # Create directories for storing generated files
 GENERATED_DIR = Path("generated_files")
 GENERATED_DIR.mkdir(exist_ok=True)
+
+# File upload constants
+MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
+ALLOWED_FILE_TYPES = {"application/pdf", "text/plain", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
+ALLOWED_EXTENSIONS = {".pdf", ".txt", ".docx"}
 
 async def periodic_cleanup():
     print("Cleanup task started")
@@ -233,6 +239,41 @@ def html_to_docx_bytes(html: str) -> bytes:
     return data
 
 
+def extract_text_from_docx(file_bytes: bytes) -> str:
+    """Extract text from a DOCX file."""
+    doc = Document(io.BytesIO(file_bytes))
+    text_parts = []
+    for paragraph in doc.paragraphs:
+        if paragraph.text.strip():
+            text_parts.append(paragraph.text)
+    return "\n".join(text_parts)
+
+
+def extract_text_from_txt(file_bytes: bytes) -> str:
+    """Extract text from a TXT file."""
+    try:
+        return file_bytes.decode('utf-8')
+    except UnicodeDecodeError:
+        # Try with latin-1 as fallback
+        return file_bytes.decode('latin-1')
+
+
+def validate_upload_file(file: UploadFile) -> None:
+    """Validate uploaded file type and size."""
+    if not file:
+        return
+    
+    # Check file extension
+    file_ext = Path(file.filename or "").suffix.lower()
+    if file_ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+    
+    # Note: Size validation will be done after reading the file
+
+
 class DocumentRequest(BaseModel):
     prompt: str
 
@@ -366,26 +407,72 @@ async def ai_edit_document(request: AiEditRequest):
 
 
 @app.post("/generate", response_model=DocumentResponse)
-async def generate_document(request: DocumentRequest):
+async def generate_document(
+    prompt: str = Form(...),
+    file: UploadFile | None = File(None)
+):
     """
-    Generate a DOCX document based on the user's prompt.
+    Generate a DOCX document based on the user's prompt and optional source file.
     
     Args:
-        request: DocumentRequest containing the prompt
+        prompt: User's prompt describing what to generate
+        file: Optional source file (PDF, TXT, or DOCX) for context
         
     Returns:
         DocumentResponse with download URL and metadata
     """
     try:
+        # Validate file if provided
+        if file:
+            validate_upload_file(file)
+        
         # Generate unique filename
         file_id = str(uuid.uuid4())
         filename = f"document_{file_id}.docx"
         output_path = GENERATED_DIR / filename
         
+        # Process uploaded file if provided
+        document_context = ""
+        if file and file.filename:
+            file_bytes = await file.read()
+            
+            # Validate file size
+            if len(file_bytes) > MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File size exceeds maximum allowed size of {MAX_FILE_SIZE // (1024*1024)}MB"
+                )
+            
+            file_ext = Path(file.filename).suffix.lower()
+            
+            if file_ext == ".pdf":
+                # For PDFs, we'll use Gemini's document understanding
+                # We'll pass it directly to Gemini instead of extracting text
+                document_context = "[PDF document provided for context]"
+            elif file_ext == ".txt":
+                document_context = extract_text_from_txt(file_bytes)
+            elif file_ext == ".docx":
+                document_context = extract_text_from_docx(file_bytes)
+        
         # Create prompt for Gemini
-        gemini_prompt = f"""Generate Python code using python-docx to create a DETAILED, LONG, and PROFESSIONALLY FORMATTED document based on the following requirements:
+        if document_context and document_context != "[PDF document provided for context]":
+            gemini_prompt = f"""Generate Python code using python-docx to create a DETAILED, LONG, and PROFESSIONALLY FORMATTED document based on the following requirements:
 
-{request.prompt}
+{prompt}
+
+SOURCE DOCUMENT CONTEXT:
+{document_context}
+
+Requirements:
+- Make the content extensive and ellaborate.
+- Use the source document context to inform the generated content.
+- Use professional formatting (headings, spacing, fonts).
+- Ensure the code handles the saving to 'output_path'.
+"""
+        else:
+            gemini_prompt = f"""Generate Python code using python-docx to create a DETAILED, LONG, and PROFESSIONALLY FORMATTED document based on the following requirements:
+
+{prompt}
 
 Requirements:
 - Make the content extensive and ellaborate.
@@ -415,9 +502,29 @@ Ensure all imports are correct and the file is saved to 'output_path'.
 output_path variable is available in the environment, do not define it, just use it.
 """
                 
+                # Prepare content parts for Gemini
+                content_parts = []
+                
+                # If we have a PDF file, include it using Gemini's document understanding
+                if file and file.filename and Path(file.filename).suffix.lower() == ".pdf":
+                    # Reset file pointer
+                    await file.seek(0)
+                    pdf_bytes = await file.read()
+                    
+                    # Add PDF as inline data
+                    content_parts.append(
+                        types.Part.from_bytes(
+                            data=pdf_bytes,
+                            mime_type='application/pdf',
+                        )
+                    )
+                
+                # Add the text prompt
+                content_parts.append(content_to_send)
+                
                 response = client.models.generate_content(
                     model=MODEL_NAME,
-                    contents=content_to_send,
+                    contents=content_parts,
                     config=types.GenerateContentConfig(
                         system_instruction=DOC_GEN_SYS_INSTRUCT
                     )
